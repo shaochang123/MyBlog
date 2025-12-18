@@ -3,9 +3,18 @@ const router = express.Router();
 const db = require('../config/db');
 const { getNextId } = require('../utils/helper');
 
-// Get all movies
+// Get all movies with complex stats (Join, Aggregation, Subquery)
 router.get('/', (req, res) => {
-    db.query('SELECT * FROM movies', (err, results) => {
+    const sql = `
+        SELECT m.*, 
+               COALESCE(AVG(t.price), 0) as avg_price,
+               COUNT(t.ticket_id) as ticket_count,
+               (SELECT AVG(price) FROM tickets) as global_avg_price
+        FROM movies m
+        LEFT JOIN tickets t ON m.movie_id = t.movie_id
+        GROUP BY m.movie_id
+    `;
+    db.query(sql, (err, results) => {
         if (err) return res.status(500).send(err);
         res.json(results);
     });
