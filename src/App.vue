@@ -5,19 +5,47 @@
       <router-view />
     </div>
     <footer class="app-footer">
-      <p>总访问量：0</p>
-      <p>当前在线人数：1</p>
+      <p>总访问量：{{ totalVisits }}</p>
+      <p>当前在线人数：{{ onlineUsers }}</p>
     </footer>
   </div>
 </template>
 
 <script>
+import { io } from 'socket.io-client';
 import AppHeader from './components/AppHeader.vue';
 
 export default {
   name: 'App',
   components: {
     AppHeader
+  },
+  data() {
+    return {
+      socket: null,
+      totalVisits: 0,
+      onlineUsers: 0
+    };
+  },
+  mounted() {
+    // Connect to Socket.io
+    this.socket = io();
+    
+    this.socket.on('connect', () => {
+      // Check if this is a new session visit
+      if (!sessionStorage.getItem('hasVisited')) {
+        this.socket.emit('new-visit');
+        sessionStorage.setItem('hasVisited', 'true');
+      }
+    });
+
+    this.socket.on('stats-update', (stats) => {
+      this.totalVisits = stats.totalVisits;
+      this.onlineUsers = stats.onlineUsers;
+    });
+  },
+  beforeUnmount() {
+    if (this.socket) this.socket.disconnect();
   }
 };
 </script>
