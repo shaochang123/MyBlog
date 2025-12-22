@@ -82,3 +82,129 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 200px;
+}
+.form-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+}
+.input-field {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  flex: 1;
+}
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+.btn-primary {
+  background: #42b983;
+  color: white;
+}
+.btn-primary:hover {
+  background: #3aa876;
+}
+.btn-danger {
+  background: #ff4757;
+  color: white;
+}
+.btn-danger:hover {
+  background: #ff6b81;
+}
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+.btn-success:hover {
+  background: #059669;
+}
+.btn-info {
+  background: #0ea5e9;
+  color: white;
+}
+.btn-info:hover {
+  background: #0284c7;
+}
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 12px;
+  margin-right: 5px;
+}
+.table-container {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #2c3e50;
+}
+tr:hover {
+  background: #f8f9fa;
+}
+.empty-state {
+  text-align: center;
+  color: #999;
+  padding: 40px;
+}
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.badge-blue {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.badge-pink {
+  background: #fce7f3;
+  color: #be185d;
+}
+.points {
+  font-family: monospace;
+  font-weight: bold;
+  color: #f59e0b;
+}
+</style>

@@ -41,3 +41,45 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.card-header {
+  margin-bottom: 20px;
+}
+.form-group {
+  display: flex;
+  gap: 10px;
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  align-items: center;
+}
+.input-field {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  flex: 1;
+}
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+.btn-warning {
+  background: #f59e0b;
+  color: white;
+}
+.btn-warning:hover {
+  background: #d97706;
+}
+</style>
