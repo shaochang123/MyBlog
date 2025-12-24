@@ -105,8 +105,8 @@ export default {
 
       try {
         const url = this.isLogin 
-          ? 'http://hmajax.itheima.net/api/login' 
-          : 'http://hmajax.itheima.net/api/register';
+          ? 'https://hmajax.itheima.net/itheima-api/login' 
+          : 'https://hmajax.itheima.net/itheima-api/register';
         
         const res = await axios.post(url, {
           username: this.username,

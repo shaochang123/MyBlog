@@ -62,7 +62,7 @@ export default {
     async queryArea() {
       this.searched = true;
       try {
-        const res = await axios.get('http://hmajax.itheima.net/api/area', {
+        const res = await axios.get('https://hmajax.itheima.net/api/area', {
           params: {
             pname: this.province,
             cname: this.city
