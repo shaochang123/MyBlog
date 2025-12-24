@@ -1,5 +1,8 @@
 module.exports = {
   transpileDependencies: [],
+  chainWebpack: config => {
+    config.plugins.delete('progress');
+  },
   devServer: {
     port: 8080,
     historyApiFallback: true, // 解决前端路由刷新404问题
