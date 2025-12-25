@@ -77,6 +77,8 @@ app.use((req, res, next) => {
 app.use('/api/movies', require('./routes/movies'));
 app.use('/api/members', require('./routes/members'));
 app.use('/api/tickets', require('./routes/tickets'));
+app.use('/api/halls', require('./routes/halls'));
+app.use('/api/showtimes', require('./routes/showtimes'));
 
 server.listen(port, () => {
     console.log(`Server running on port ${port}`);

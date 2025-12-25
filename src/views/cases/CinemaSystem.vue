@@ -4,6 +4,10 @@
       <div class="system-header">
         <h1>🎬 电影院管理系统演示</h1>
       </div>
+      
+      <!-- 新增：影院后台管理 (影厅/排片) -->
+      <CinemaAdmin :movies="movies" />
+
       <MovieManager 
         :movies="movies" 
         @add-movie="addMovie" 
@@ -50,6 +54,7 @@ import MemberManager from '../../components/MemberManager.vue';
 import TicketPurchase from '../../components/TicketPurchase.vue';
 import RechargeModal from '../../components/RechargeModal.vue';
 import TicketListModal from '../../components/TicketListModal.vue';
+import CinemaAdmin from '../../components/CinemaAdmin.vue';
 
 const API_URL = '/api';
 
@@ -65,7 +70,8 @@ export default {
     MemberManager,
     TicketPurchase,
     RechargeModal,
-    TicketListModal
+    TicketListModal,
+    CinemaAdmin
   },
   data() {
     return {
