@@ -31,16 +31,14 @@ const upgradeQueries = [
         FOREIGN KEY (member_id) REFERENCES members(member_id) ON DELETE CASCADE
     )`,
 
-    // 4. 修改 tickets 表 (添加 showtime_id, seat_info, status)
-    // 注意：这里假设 tickets 表已经存在。如果不存在会报错，所以最好先检查列是否存在。
-    // 为了简化，我们尝试添加列，如果列已存在 MySQL 会报错但我们可以忽略或用存储过程。
-    // 这里使用简单的 ALTER IGNORE 逻辑不太容易，我们直接尝试添加。
-    `ALTER TABLE tickets ADD COLUMN showtime_id INT`,
-    `ALTER TABLE tickets ADD COLUMN seat_info VARCHAR(50)`,
-    `ALTER TABLE tickets ADD COLUMN status ENUM('valid', 'used', 'refunded') DEFAULT 'valid'`,
-    
-    // 5. 尝试添加外键 (如果 showtime_id 添加成功)
-    `ALTER TABLE tickets ADD CONSTRAINT fk_ticket_showtime FOREIGN KEY (showtime_id) REFERENCES showtimes(id)`
+    // 4. 创建票务-排片关联表 (不修改原 tickets 表)
+    `CREATE TABLE IF NOT EXISTS ticket_showtime (
+        ticket_id INT NOT NULL,
+        showtime_id INT NOT NULL,
+        PRIMARY KEY (ticket_id, showtime_id),
+        FOREIGN KEY (ticket_id) REFERENCES tickets(ticket_id) ON DELETE CASCADE,
+        FOREIGN KEY (showtime_id) REFERENCES showtimes(id) ON DELETE CASCADE
+    )`
 ];
 
 const runUpgrade = async () => {

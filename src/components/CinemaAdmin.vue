@@ -13,6 +13,12 @@
       >
         📅 排片管理
       </button>
+      <button 
+        :class="['tab-btn', { active: activeTab === 'records' }]" 
+        @click="activeTab = 'records'"
+      >
+        💰 财务流水
+      </button>
     </div>
 
     <!-- 影厅管理 -->
@@ -87,6 +93,37 @@
         </tbody>
       </table>
     </div>
+
+    <!-- 财务流水 -->
+    <div v-if="activeTab === 'records'" class="tab-content">
+      <div class="form-inline">
+        <button @click="fetchRecords" class="btn btn-primary">刷新记录</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>会员</th>
+            <th>类型</th>
+            <th>金额</th>
+            <th>时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in records" :key="r.id">
+            <td>{{ r.id }}</td>
+            <td>{{ r.member_name }} (ID: {{ r.member_id }})</td>
+            <td>
+              <span :class="['badge', r.type]">{{ formatType(r.type) }}</span>
+            </td>
+            <td :class="{ 'text-green': r.type !== 'payment', 'text-red': r.type === 'payment' }">
+              {{ r.type === 'payment' ? '-' : '+' }}{{ r.amount }}
+            </td>
+            <td>{{ formatDate(r.create_time) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -101,6 +138,7 @@ export default {
       activeTab: 'halls',
       halls: [],
       showtimes: [],
+      records: [],
       newHall: { name: '', type: '2D', seat_count: '' },
       newShowtime: { movie_id: '', hall_id: '', start_time: '', price: '' }
     };
@@ -108,40 +146,81 @@ export default {
   mounted() {
     this.fetchHalls();
     this.fetchShowtimes();
+    this.fetchRecords();
   },
   methods: {
     async fetchHalls() {
-      const res = await axios.get('/api/halls');
-      this.halls = res.data;
+      try {
+        const res = await axios.get('/api/halls');
+        this.halls = res.data;
+      } catch (e) {
+        console.error(e);
+      }
     },
     async fetchShowtimes() {
-      const res = await axios.get('/api/showtimes');
-      this.showtimes = res.data;
+      try {
+        const res = await axios.get('/api/showtimes');
+        this.showtimes = res.data;
+      } catch (e) {
+        console.error(e);
+      }
+    },
+    async fetchRecords() {
+      try {
+        const res = await axios.get('/api/records');
+        this.records = res.data;
+      } catch (e) {
+        console.error(e);
+      }
     },
     async addHall() {
       if (!this.newHall.name) return alert('请输入影厅名称');
-      await axios.post('/api/halls', this.newHall);
-      this.newHall = { name: '', type: '2D', seat_count: '' };
-      this.fetchHalls();
+      try {
+        await axios.post('/api/halls', this.newHall);
+        this.newHall = { name: '', type: '2D', seat_count: '' };
+        this.fetchHalls();
+      } catch (e) {
+        alert('添加失败');
+      }
     },
     async deleteHall(id) {
       if (!confirm('确定删除?')) return;
-      await axios.delete(`/api/halls/${id}`);
-      this.fetchHalls();
+      try {
+        await axios.delete(`/api/halls/${id}`);
+        this.fetchHalls();
+      } catch (e) {
+        alert('删除失败');
+      }
     },
     async addShowtime() {
       if (!this.newShowtime.movie_id || !this.newShowtime.start_time) return alert('请填写完整');
-      await axios.post('/api/showtimes', this.newShowtime);
-      this.newShowtime = { movie_id: '', hall_id: '', start_time: '', price: '' };
-      this.fetchShowtimes();
+      try {
+        await axios.post('/api/showtimes', this.newShowtime);
+        this.newShowtime = { movie_id: '', hall_id: '', start_time: '', price: '' };
+        this.fetchShowtimes();
+      } catch (e) {
+        alert('添加失败');
+      }
     },
     async deleteShowtime(id) {
       if (!confirm('确定删除?')) return;
-      await axios.delete(`/api/showtimes/${id}`);
-      this.fetchShowtimes();
+      try {
+        await axios.delete(`/api/showtimes/${id}`);
+        this.fetchShowtimes();
+      } catch (e) {
+        alert('删除失败');
+      }
     },
     formatDate(dateStr) {
       return new Date(dateStr).toLocaleString();
+    },
+    formatType(type) {
+      const map = {
+        'recharge': '充值',
+        'payment': '消费',
+        'refund': '退款'
+      };
+      return map[type] || type;
     }
   }
 }
@@ -208,4 +287,17 @@ export default {
 .btn-primary { background: #42b983; }
 .btn-danger { background: #ff4d4f; }
 .btn-sm { font-size: 12px; padding: 4px 8px; }
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: white;
+}
+.badge.recharge { background: #52c41a; }
+.badge.payment { background: #faad14; }
+.badge.refund { background: #1890ff; }
+
+.text-green { color: #52c41a; font-weight: bold; }
+.text-red { color: #ff4d4f; font-weight: bold; }
 </style>

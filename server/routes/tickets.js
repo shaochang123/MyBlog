@@ -5,7 +5,7 @@ const { getNextId } = require('../utils/helper');
 
 // Buy ticket (Deduct points and add ticket)
 router.post('/buy', (req, res) => {
-    const { member_id, movie_id, price } = req.body;
+    const { member_id, movie_id, showtime_id } = req.body;
     // Format date as YYYY-MM-DD HH:mm:ss
     const now = new Date();
     const purchase_date = now.toISOString().slice(0, 19).replace('T', ' ');
@@ -20,40 +20,48 @@ router.post('/buy', (req, res) => {
                 return res.status(500).send(err);
             }
 
-            // Check points
-            connection.query('SELECT points FROM members WHERE member_id = ?', [member_id], (err, results) => {
+            // 1. Get price from showtimes
+            connection.query('SELECT price FROM showtimes WHERE id = ?', [showtime_id], (err, showtimeResults) => {
                 if (err) {
                     return connection.rollback(() => {
                         connection.release();
                         res.status(500).send(err);
                     });
                 }
-                if (results.length === 0) {
+                if (showtimeResults.length === 0) {
                     return connection.rollback(() => {
                         connection.release();
-                        res.status(404).send('Member not found');
+                        res.status(404).send('Showtime not found');
                     });
                 }
 
-                const currentPoints = results[0].points;
-                if (currentPoints < price) {
-                    return connection.rollback(() => {
-                        connection.release();
-                        res.status(400).send('Insufficient points');
-                    });
-                }
+                const price = showtimeResults[0].price;
 
-                // Deduct points
-                connection.query('UPDATE members SET points = points - ? WHERE member_id = ?', [price, member_id], (err) => {
+                // 2. Check points
+                connection.query('SELECT points FROM members WHERE member_id = ?', [member_id], (err, results) => {
                     if (err) {
                         return connection.rollback(() => {
                             connection.release();
                             res.status(500).send(err);
                         });
                     }
+                    if (results.length === 0) {
+                        return connection.rollback(() => {
+                            connection.release();
+                            res.status(404).send('Member not found');
+                        });
+                    }
 
-                    // Get next ticket ID
-                    getNextId('tickets', 'ticket_id', 1, (err, nextId) => {
+                    const currentPoints = results[0].points;
+                    if (currentPoints < price) {
+                        return connection.rollback(() => {
+                            connection.release();
+                            res.status(400).send('Insufficient points');
+                        });
+                    }
+
+                    // 3. Deduct points
+                    connection.query('UPDATE members SET points = points - ? WHERE member_id = ?', [price, member_id], (err) => {
                         if (err) {
                             return connection.rollback(() => {
                                 connection.release();
@@ -61,9 +69,8 @@ router.post('/buy', (req, res) => {
                             });
                         }
 
-                        // Insert ticket
-                        const sql = 'INSERT INTO tickets (ticket_id, member_id, movie_id, price, purchase_date) VALUES (?, ?, ?, ?, ?)';
-                        connection.query(sql, [nextId, member_id, movie_id, price, purchase_date], (err, result) => {
+                        // 4. Get next ticket ID
+                        getNextId('tickets', 'ticket_id', 1, (err, nextId) => {
                             if (err) {
                                 return connection.rollback(() => {
                                     connection.release();
@@ -71,16 +78,47 @@ router.post('/buy', (req, res) => {
                                 });
                             }
 
-                            connection.commit(err => {
+                            // 5. Insert ticket (WITHOUT price)
+                            const sql = 'INSERT INTO tickets (ticket_id, member_id, movie_id, purchase_date) VALUES (?, ?, ?, ?)';
+                            connection.query(sql, [nextId, member_id, movie_id, purchase_date], (err, result) => {
                                 if (err) {
                                     return connection.rollback(() => {
                                         connection.release();
                                         res.status(500).send(err);
                                     });
                                 }
-                                connection.release();
-                                req.io.emit('data-update');
-                                res.json({ message: 'Ticket purchased successfully', ticket_id: nextId });
+
+                                // 6. Insert ticket_showtime relation
+                                const relSql = 'INSERT INTO ticket_showtime (ticket_id, showtime_id) VALUES (?, ?)';
+                                connection.query(relSql, [nextId, showtime_id], (err) => {
+                                    if (err) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            res.status(500).send(err);
+                                        });
+                                    }
+
+                                    // 7. Insert recharge_record (payment)
+                                    const recordSql = 'INSERT INTO recharge_records (member_id, amount, type, create_time) VALUES (?, ?, "payment", ?)';
+                                    connection.query(recordSql, [member_id, price, purchase_date], (err) => {
+                                        if (err) {
+                                            // Log error but don't fail transaction for this (optional)
+                                            console.error('Failed to log payment record:', err);
+                                        }
+                                        
+                                        connection.commit(err => {
+                                            if (err) {
+                                                return connection.rollback(() => {
+                                                    connection.release();
+                                                    res.status(500).send(err);
+                                                });
+                                            }
+                                            connection.release();
+                                            req.io.emit('data-update');
+                                            res.json({ message: 'Ticket purchased successfully', ticket_id: nextId });
+                                        });
+                                    });
+                                });
                             });
                         });
                     });
@@ -103,8 +141,15 @@ router.delete('/:id', (req, res) => {
                 return res.status(500).send(err);
             }
 
-            // Get ticket info to refund points
-            connection.query('SELECT member_id, price FROM tickets WHERE ticket_id = ?', [id], (err, results) => {
+            // Get ticket info to refund points (Join with showtimes to get price)
+            const sql = `
+                SELECT t.member_id, s.price 
+                FROM tickets t
+                JOIN ticket_showtime ts ON t.ticket_id = ts.ticket_id
+                JOIN showtimes s ON ts.showtime_id = s.id
+                WHERE t.ticket_id = ?
+            `;
+            connection.query(sql, [id], (err, results) => {
                 if (err) {
                     return connection.rollback(() => {
                         connection.release();
@@ -129,25 +174,31 @@ router.delete('/:id', (req, res) => {
                         });
                     }
 
-                    // Delete ticket
-                    connection.query('DELETE FROM tickets WHERE ticket_id = ?', [id], (err) => {
-                        if (err) {
-                            return connection.rollback(() => {
-                                connection.release();
-                                res.status(500).send(err);
-                            });
-                        }
+                    // Insert recharge_record (refund)
+                    const recordSql = 'INSERT INTO recharge_records (member_id, amount, type, create_time) VALUES (?, ?, "refund", NOW())';
+                    connection.query(recordSql, [member_id, price], (err) => {
+                         if (err) console.error('Failed to log refund record:', err);
 
-                        connection.commit(err => {
+                        // Delete ticket
+                        connection.query('DELETE FROM tickets WHERE ticket_id = ?', [id], (err) => {
                             if (err) {
                                 return connection.rollback(() => {
                                     connection.release();
                                     res.status(500).send(err);
                                 });
                             }
-                            connection.release();
-                            req.io.emit('data-update');
-                            res.json({ message: 'Ticket deleted and points refunded' });
+
+                            connection.commit(err => {
+                                if (err) {
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        res.status(500).send(err);
+                                    });
+                                }
+                                connection.release();
+                                req.io.emit('data-update');
+                                res.json({ message: 'Ticket deleted and points refunded' });
+                            });
                         });
                     });
                 });

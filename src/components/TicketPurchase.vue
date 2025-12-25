@@ -8,7 +8,7 @@
       <select v-model="ticketForm.member_id" class="input-field">
         <option disabled value="">选择会员</option>
         <option v-for="member in members" :key="member.member_id" :value="member.member_id">
-          {{ member.name }} (余额: {{ member.balance || 0 }})
+          {{ member.name }} (余额: {{ member.points || 0 }})
         </option>
       </select>
 
@@ -22,7 +22,7 @@
 
       <!-- 3. 选场次 -->
       <select v-model="ticketForm.showtime_id" class="input-field" :disabled="!showtimes.length">
-        <option disabled value="">选择场次</option>
+        <option  value="">选择场次</option>
         <option v-for="s in showtimes" :key="s.id" :value="s.id">
           {{ formatDate(s.start_time) }} - {{ s.hall_name }} (￥{{ s.price }})
         </option>

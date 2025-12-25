@@ -30,15 +30,15 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="movie in filteredMovies" :key="movie.movie_id">
-            <td>{{ movie.movie_id }}</td>
-            <td>{{ movie.title }}</td>
-            <td>{{ movie.director }}</td>
-            <td>{{ movie.duration }} min</td>
-            <td>{{ movie.avg_price ? Number(movie.avg_price).toFixed(2) : '0.00' }}</td>
-            <td>{{ movie.ticket_count || 0 }}</td>
+          <tr v-for="movies in filteredMovies" :key="movies.movie_id">
+            <td>{{ movies.movie_id }}</td>
+            <td>{{ movies.title }}</td>
+            <td>{{ movies.director }}</td>
+            <td>{{ movies.duration }} min</td>
+            <td>{{ movies.avg_price ? Number(movies.avg_price).toFixed(2) : '0.00' }}</td>
+            <td>{{ movies.ticket_count || 0 }}</td>
             <td>
-              <button @click="$emit('delete-movie', movie.movie_id)" class="btn btn-danger">下架</button>
+              <button @click="$emit('delete-movie', movies.movie_id)" class="btn btn-danger">下架</button>
             </td>
           </tr>
           <tr v-if="filteredMovies.length === 0">

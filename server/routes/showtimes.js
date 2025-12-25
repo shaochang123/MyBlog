@@ -23,7 +23,7 @@ router.get('/movie/:movieId', (req, res) => {
         SELECT s.*, h.name as hall_name 
         FROM showtimes s
         JOIN halls h ON s.hall_id = h.id
-        WHERE s.movie_id = ? AND s.start_time > NOW()
+        WHERE s.movie_id = ? 
         ORDER BY s.start_time ASC
     `;
     db.query(sql, [req.params.movieId], (err, results) => {

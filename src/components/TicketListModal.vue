@@ -10,6 +10,7 @@
             <thead>
               <tr>
                 <th>电影</th>
+                <th>场次</th>
                 <th>消耗积分</th>
                 <th>购票时间</th>
                 <th>操作</th>
@@ -18,6 +19,10 @@
             <tbody>
               <tr v-for="ticket in tickets" :key="ticket.ticket_id">
                 <td>{{ ticket.title }}</td>
+                <td>
+                  <div class="small-text">{{ ticket.hall_name }}</div>
+                  <div class="small-text">{{ formatDate(ticket.start_time) }}</div>
+                </td>
                 <td class="points">-{{ ticket.price }}</td>
                 <td>{{ formatDate(ticket.purchase_date) }}</td>
                 <td>
