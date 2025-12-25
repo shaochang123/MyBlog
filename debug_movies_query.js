@@ -7,8 +7,7 @@ const sql = `
            (SELECT AVG(price) FROM showtimes) as global_avg_price
     FROM movies m
     LEFT JOIN tickets t ON m.movie_id = t.movie_id
-    LEFT JOIN ticket_showtime ts ON t.ticket_id = ts.ticket_id
-    LEFT JOIN showtimes s ON ts.showtime_id = s.id
+    LEFT JOIN showtimes s ON t.showtime_id = s.id
     GROUP BY m.movie_id
 `;
 

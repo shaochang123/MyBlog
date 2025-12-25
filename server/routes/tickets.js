@@ -79,8 +79,8 @@ router.post('/buy', (req, res) => {
                             }
 
                             // 5. Insert ticket (WITHOUT price)
-                            const sql = 'INSERT INTO tickets (ticket_id, member_id, movie_id, purchase_date) VALUES (?, ?, ?, ?)';
-                            connection.query(sql, [nextId, member_id, movie_id, purchase_date], (err, result) => {
+                            const sql = 'INSERT INTO tickets (ticket_id, member_id, movie_id, purchase_date, showtime_id) VALUES (?, ?, ?, ?, ?)';
+                            connection.query(sql, [nextId, member_id, movie_id, purchase_date, showtime_id], (err, result) => {
                                 if (err) {
                                     return connection.rollback(() => {
                                         connection.release();
@@ -88,35 +88,24 @@ router.post('/buy', (req, res) => {
                                     });
                                 }
 
-                                // 6. Insert ticket_showtime relation
-                                const relSql = 'INSERT INTO ticket_showtime (ticket_id, showtime_id) VALUES (?, ?)';
-                                connection.query(relSql, [nextId, showtime_id], (err) => {
+                                // 6. Insert recharge_record (payment)
+                                const recordSql = 'INSERT INTO recharge_records (member_id, amount, type, create_time) VALUES (?, ?, "payment", ?)';
+                                connection.query(recordSql, [member_id, price, purchase_date], (err) => {
                                     if (err) {
-                                        return connection.rollback(() => {
-                                            connection.release();
-                                            res.status(500).send(err);
-                                        });
+                                        // Log error but don't fail transaction for this (optional)
+                                        console.error('Failed to log payment record:', err);
                                     }
-
-                                    // 7. Insert recharge_record (payment)
-                                    const recordSql = 'INSERT INTO recharge_records (member_id, amount, type, create_time) VALUES (?, ?, "payment", ?)';
-                                    connection.query(recordSql, [member_id, price, purchase_date], (err) => {
+                                    
+                                    connection.commit(err => {
                                         if (err) {
-                                            // Log error but don't fail transaction for this (optional)
-                                            console.error('Failed to log payment record:', err);
+                                            return connection.rollback(() => {
+                                                connection.release();
+                                                res.status(500).send(err);
+                                            });
                                         }
-                                        
-                                        connection.commit(err => {
-                                            if (err) {
-                                                return connection.rollback(() => {
-                                                    connection.release();
-                                                    res.status(500).send(err);
-                                                });
-                                            }
-                                            connection.release();
-                                            req.io.emit('data-update');
-                                            res.json({ message: 'Ticket purchased successfully', ticket_id: nextId });
-                                        });
+                                        connection.release();
+                                        req.io.emit('data-update');
+                                        res.json({ message: 'Ticket purchased successfully', ticket_id: nextId });
                                     });
                                 });
                             });
@@ -145,8 +134,7 @@ router.delete('/:id', (req, res) => {
             const sql = `
                 SELECT t.member_id, s.price 
                 FROM tickets t
-                JOIN ticket_showtime ts ON t.ticket_id = ts.ticket_id
-                JOIN showtimes s ON ts.showtime_id = s.id
+                JOIN showtimes s ON t.showtime_id = s.id
                 WHERE t.ticket_id = ?
             `;
             connection.query(sql, [id], (err, results) => {

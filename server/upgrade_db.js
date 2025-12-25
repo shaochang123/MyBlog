@@ -31,14 +31,10 @@ const upgradeQueries = [
         FOREIGN KEY (member_id) REFERENCES members(member_id) ON DELETE CASCADE
     )`,
 
-    // 4. 创建票务-排片关联表 (不修改原 tickets 表)
-    `CREATE TABLE IF NOT EXISTS ticket_showtime (
-        ticket_id INT NOT NULL,
-        showtime_id INT NOT NULL,
-        PRIMARY KEY (ticket_id, showtime_id),
-        FOREIGN KEY (ticket_id) REFERENCES tickets(ticket_id) ON DELETE CASCADE,
-        FOREIGN KEY (showtime_id) REFERENCES showtimes(id) ON DELETE CASCADE
-    )`
+    // 4. 为 tickets 表添加 showtime_id 字段（如果不存在）
+    `ALTER TABLE tickets ADD COLUMN showtime_id INT, 
+     ADD CONSTRAINT fk_tickets_showtime FOREIGN KEY (showtime_id) REFERENCES showtimes(id) ON DELETE CASCADE`,
+    `ALTER TABLE tickets DROP COLUMN seat_info`,
 ];
 
 const runUpgrade = async () => {

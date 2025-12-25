@@ -5,7 +5,7 @@ const { getNextId } = require('../utils/helper');
 
 // Get all movies with complex stats (Join, Aggregation, Subquery)
 router.get('/', (req, res) => {
-    // 由于 tickets 表不再存储 price，我们需要通过 ticket_showtime -> showtimes 来获取价格
+    // 通过 tickets.showtime_id 直接关联 showtimes 获取价格
     // 注意：这里使用 LEFT JOIN 确保即使没有票也能查出电影
     const sql = `
         SELECT m.*, 
@@ -14,8 +14,7 @@ router.get('/', (req, res) => {
                (SELECT AVG(price) FROM showtimes) as global_avg_price
         FROM movies m
         LEFT JOIN tickets t ON m.movie_id = t.movie_id
-        LEFT JOIN ticket_showtime ts ON t.ticket_id = ts.ticket_id
-        LEFT JOIN showtimes s ON ts.showtime_id = s.id
+        LEFT JOIN showtimes s ON t.showtime_id = s.id
         GROUP BY m.movie_id
     `;
     db.query(sql, (err, results) => {
