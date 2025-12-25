@@ -3,12 +3,23 @@ const router = express.Router();
 const db = require('../config/db');
 const { getNextId } = require('../utils/helper');
 
+// 获取本地时间格式化为 YYYY-MM-DD HH:mm:ss（解决时区问题）
+const getLocalDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
 // Buy ticket (Deduct points and add ticket)
 router.post('/buy', (req, res) => {
     const { member_id, movie_id, showtime_id } = req.body;
-    // Format date as YYYY-MM-DD HH:mm:ss
-    const now = new Date();
-    const purchase_date = now.toISOString().slice(0, 19).replace('T', ' ');
+    // 使用本地时间（已修复时区问题）
+    const purchase_date = getLocalDateTime();
 
     // Start transaction
     db.getConnection((err, connection) => {

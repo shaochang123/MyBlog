@@ -48,7 +48,7 @@
 
 <script>
 import axios from 'axios';
-import { io } from 'socket.io-client';
+// socket.io 连接由 App.vue 统一管理，通过 inject 获取
 import MovieManager from '../../components/MovieManager.vue';
 import MemberManager from '../../components/MemberManager.vue';
 import TicketPurchase from '../../components/TicketPurchase.vue';
@@ -73,9 +73,10 @@ export default {
     TicketListModal,
     CinemaAdmin
   },
+  // 注入父组件共享的 socket（避免重复连接导致在线人数翻倍）
+  inject: ['getSocket'],
   data() {
     return {
-      socket: null,
       movies: [],
       members: [],
       
@@ -83,25 +84,34 @@ export default {
       currentMember: null,
 
       showTicketsModal: false,
-      memberTickets: []
+      memberTickets: [],
+      
+      dataUpdateHandler: null
     };
   },
   mounted() {
     this.fetchMovies();
     this.fetchMembers();
 
-    // Connect to Socket.io server (using relative path via proxy)
-    this.socket = io(); 
-    this.socket.on('data-update', () => {
-      this.fetchMovies();
-      this.fetchMembers();
-      if (this.showTicketsModal && this.currentMember) {
-        this.viewTickets(this.currentMember);
-      }
-    });
+    // 复用 App.vue 的 socket 连接，只监听数据更新事件
+    const socket = this.getSocket();
+    if (socket) {
+      this.dataUpdateHandler = () => {
+        this.fetchMovies();
+        this.fetchMembers();
+        if (this.showTicketsModal && this.currentMember) {
+          this.viewTickets(this.currentMember);
+        }
+      };
+      socket.on('data-update', this.dataUpdateHandler);
+    }
   },
   beforeUnmount() {
-    if (this.socket) this.socket.disconnect();
+    // 只移除事件监听器，不断开连接（连接由 App.vue 管理）
+    const socket = this.getSocket();
+    if (socket && this.dataUpdateHandler) {
+      socket.off('data-update', this.dataUpdateHandler);
+    }
   },
   methods: {
     async fetchMovies() {

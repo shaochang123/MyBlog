@@ -27,6 +27,12 @@ export default {
       onlineUsers: 0
     };
   },
+  provide() {
+    // 共享 socket 连接给子组件使用，避免重复创建连接
+    return {
+      getSocket: () => this.socket
+    };
+  },
   mounted() {
     // Connect to Socket.io
     this.socket = io();
