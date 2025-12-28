@@ -2,7 +2,7 @@
   <div>
     <div class="container">
       <div class="system-header">
-        <h1>🎬 电影院管理系统演示</h1>
+        <h1>🎬 电影院管理系统</h1>
       </div>
       
       <!-- 新增：影院后台管理 (影厅/排片) -->

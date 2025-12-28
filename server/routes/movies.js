@@ -54,41 +54,37 @@ router.get('/', (req, res) => {
             ORDER BY m.movie_id
             LIMIT ?
         `;
-        return db.query(sql, [like, like, limit], (err, results) => {
+        db.query(sql, [like, like, limit], (err, results) => {
             if (err) return res.status(500).send(err);
             res.json(results);
         });
+        return;
     }
 
     if (hot) {
+        // 使用 CTE（WITH）版本，包含 0 的电影计数，并筛选 >= 平均售出票数（MySQL 8+）
         const sql = `
-            SELECT m.*,
-                   (SELECT COUNT(t.ticket_id) FROM showtimes s JOIN tickets t ON t.showtime_id = s.id WHERE s.movie_id = m.movie_id) AS ticket_count,
-                   (
-                     SELECT COALESCE(AVG(cnt),0) FROM (
-                       SELECT COUNT(t2.ticket_id) AS cnt
-                       FROM showtimes s2
-                       JOIN tickets t2 ON t2.showtime_id = s2.id
-                       GROUP BY s2.movie_id
-                     ) AS sub
-                   ) AS avg_ticket_count
-            FROM movies m
-            WHERE (
-              SELECT COUNT(t.ticket_id) FROM showtimes s JOIN tickets t ON t.showtime_id = s.id WHERE s.movie_id = m.movie_id
-            ) > (
-              SELECT COALESCE(AVG(cnt),0) FROM (
-                SELECT COUNT(t2.ticket_id) AS cnt
-                FROM showtimes s2
-                JOIN tickets t2 ON t2.showtime_id = s2.id
-                GROUP BY s2.movie_id
-              ) AS sub
+            WITH tc AS (
+                SELECT m.movie_id, COALESCE(COUNT(t.ticket_id),0) AS ticket_count
+                FROM movies m
+                LEFT JOIN showtimes s ON s.movie_id = m.movie_id
+                LEFT JOIN tickets t ON t.showtime_id = s.id
+                GROUP BY m.movie_id
+            ), avg_cte AS (
+                SELECT COALESCE(AVG(ticket_count),0) AS avg_ticket_count FROM tc
             )
+            SELECT m.*, tc.ticket_count, avg_cte.avg_ticket_count
+            FROM movies m
+            JOIN tc ON tc.movie_id = m.movie_id
+            CROSS JOIN avg_cte
+            WHERE COALESCE(tc.ticket_count,0) >= avg_cte.avg_ticket_count
             ORDER BY m.movie_id
         `;
-        return db.query(sql, (err, results) => {
+        db.query(sql, (err, results) => {
             if (err) return res.status(500).send(err);
             res.json(results);
         });
+        return;
     }
 
     if (aboveAvg) {
@@ -100,10 +96,11 @@ router.get('/', (req, res) => {
             WHERE (SELECT COALESCE(AVG(price),0) FROM showtimes WHERE movie_id = m.movie_id) > (SELECT COALESCE(AVG(price),0) FROM showtimes)
             ORDER BY m.movie_id
         `;
-        return db.query(sql, (err, results) => {
+        db.query(sql, (err, results) => {
             if (err) return res.status(500).send(err);
             res.json(results);
         });
+        return;
     }
 
     // Default: full list (single SQL)
