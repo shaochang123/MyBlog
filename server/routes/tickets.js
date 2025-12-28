@@ -187,25 +187,49 @@ router.delete('/:id', (req, res) => {
                     connection.query(recordSql, [member_id, price], (err) => {
                          if (err) console.error('Failed to log refund record:', err);
 
-                        // Delete ticket
-                        connection.query('DELETE FROM tickets WHERE ticket_id = ?', [id], (err) => {
+                        // First check ticket status to avoid double refunds
+                        connection.query('SELECT status FROM tickets WHERE ticket_id = ?', [id], (err, rows) => {
                             if (err) {
                                 return connection.rollback(() => {
                                     connection.release();
                                     res.status(500).send(err);
                                 });
                             }
+                            if (rows.length === 0) {
+                                return connection.rollback(() => {
+                                    connection.release();
+                                    res.status(404).send('Ticket not found');
+                                });
+                            }
 
-                            connection.commit(err => {
+                            const currentStatus = rows[0].status;
+                            if (currentStatus === 'refund') {
+                                return connection.rollback(() => {
+                                    connection.release();
+                                    res.status(400).send('Ticket already refunded');
+                                });
+                            }
+
+                            // Mark ticket as refunded (do not delete record)
+                            connection.query('UPDATE tickets SET status = ? WHERE ticket_id = ?', ['refund', id], (err) => {
                                 if (err) {
                                     return connection.rollback(() => {
                                         connection.release();
                                         res.status(500).send(err);
                                     });
                                 }
-                                connection.release();
-                                req.io.emit('data-update');
-                                res.json({ message: 'Ticket deleted and points refunded' });
+
+                                connection.commit(err => {
+                                    if (err) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            res.status(500).send(err);
+                                        });
+                                    }
+                                    connection.release();
+                                    req.io.emit('data-update');
+                                    res.json({ message: 'Ticket refunded and points refunded' });
+                                });
                             });
                         });
                     });

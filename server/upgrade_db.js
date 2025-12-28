@@ -4,7 +4,7 @@ const upgradeQueries = [
     // 1. 创建影厅表
     `CREATE TABLE IF NOT EXISTS halls (
         id INT PRIMARY KEY AUTO_INCREMENT,
-        name VARCHAR(50) NOT NULL UNIQUE,
+        name VARCHAR(50) NOT NULL,
         type VARCHAR(20) DEFAULT '2D',
         seat_count INT DEFAULT 0
     )`,
@@ -35,8 +35,12 @@ const upgradeQueries = [
     `ALTER TABLE tickets ADD COLUMN showtime_id INT, 
      ADD CONSTRAINT fk_tickets_showtime FOREIGN KEY (showtime_id) REFERENCES showtimes(id) ON DELETE CASCADE`,
     `ALTER TABLE tickets DROP COLUMN seat_info`,
-    // Ensure hall names are unique (adds index if not exists)
-    `ALTER TABLE halls ADD UNIQUE INDEX idx_halls_name (name)`,
+    // Ensure hall names are not unique (drop unique index if exists)
+    `ALTER TABLE halls DROP INDEX idx_halls_name`,
+
+    // Remove end_time column from showtimes (if exists)
+    `ALTER TABLE showtimes DROP COLUMN end_time`,
+
     // Backfill tickets.showtime_id from existing tickets.movie_id when possible
     `UPDATE tickets t SET showtime_id = (
         SELECT id FROM showtimes s WHERE s.movie_id = t.movie_id ORDER BY id LIMIT 1
