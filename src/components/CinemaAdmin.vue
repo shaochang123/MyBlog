@@ -19,6 +19,12 @@
       >
         💰 财务流水
       </button>
+      <button 
+        :class="['tab-btn', { active: activeTab === 'analytics' }]" 
+        @click="activeTab = 'analytics'"
+      >
+        📊 Analytics
+      </button>
     </div>
 
     <!-- 影厅管理 -->
@@ -124,15 +130,22 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Analytics -->
+    <div v-if="activeTab === 'analytics'" class="tab-content">
+      <AnalyticsPanel />
+    </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import AnalyticsPanel from './AnalyticsPanel.vue';
 
 export default {
   name: 'CinemaAdmin',
   props: ['movies'],
+  components: { AnalyticsPanel },
   data() {
     return {
       activeTab: 'halls',

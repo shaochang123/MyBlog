@@ -30,18 +30,18 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="movies in filteredMovies" :key="movies.movie_id">
-            <td>{{ movies.movie_id }}</td>
-            <td>{{ movies.title }}</td>
-            <td>{{ movies.director }}</td>
-            <td>{{ movies.duration }} min</td>
-            <td>{{ movies.avg_price ? Number(movies.avg_price).toFixed(2) : '0.00' }}</td>
-            <td>{{ movies.ticket_count || 0 }}</td>
+          <tr v-for="movie in movies" :key="movie.movie_id">
+            <td>{{ movie.movie_id }}</td>
+            <td>{{ movie.title }}</td>
+            <td>{{ movie.director }}</td>
+            <td>{{ movie.duration }} min</td>
+            <td>{{ movie.avg_price ? Number(movie.avg_price).toFixed(2) : '0.00' }}</td>
+            <td>{{ movie.ticket_count || 0 }}</td>
             <td>
-              <button @click="$emit('delete-movie', movies.movie_id)" class="btn btn-danger">下架</button>
+              <button @click="deleteMovie(movie.movie_id)" class="btn btn-danger">下架</button>
             </td>
           </tr>
-          <tr v-if="filteredMovies.length === 0">
+          <tr v-if="movies.length === 0">
             <td colspan="7" class="empty-state">暂无电影数据</td>
           </tr>
         </tbody>
@@ -51,43 +51,55 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'MovieManager',
-  props: ['movies'],
   data() {
     return {
+      movies: [],
       searchQuery: '',
       showPopularOnly: false,
       showHighValueOnly: false,
-      newMovie: { title: '', director: '', duration: '' }
+      newMovie: { title: '', director: '', duration: '' },
+      searchTimeout: null
     }
   },
-  computed: {
-    filteredMovies() {
-      let result = this.movies;
-
-      if (this.showPopularOnly) {
-        result = result.filter(m => Number(m.ticket_count || 0) > Number(m.avg_ticket_count || 0));
-      }
-
-      if (this.showHighValueOnly && this.movies.length > 0) {
-        const globalAvg = Number((this.movies.find(m => m.global_avg_price != null) || {}).global_avg_price) || 0;
-        result = result.filter(m => Number(m.avg_price) > globalAvg);
-      }
-
-      if (!this.searchQuery) return result;
-      const query = this.searchQuery.toLowerCase();
-      return result.filter(m => 
-        m.title.toLowerCase().includes(query) || 
-        m.director.toLowerCase().includes(query)
-      );
-    }
+  mounted() {
+    this.fetchMovies();
+  },
+  watch: {
+    searchQuery() {
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(() => this.fetchMovies(), 300);
+    },
+    showPopularOnly() { this.fetchMovies(); },
+    showHighValueOnly() { this.fetchMovies(); }
   },
   methods: {
+    async fetchMovies() {
+      try {
+        const params = {};
+        if (this.showPopularOnly) params.hot = 1;
+        if (this.showHighValueOnly) params.above_avg_price = 1;
+        if (this.searchQuery && this.searchQuery.trim()) params.q = this.searchQuery.trim();
+        const res = await axios.get('/api/movies', { params });
+        this.movies = res.data || [];
+      } catch (e) {
+        console.error('Failed to fetch movies', e);
+      }
+    },
     addMovie() {
       if (!this.newMovie.title || !this.newMovie.director) return alert('请填写完整信息');
       this.$emit('add-movie', { ...this.newMovie });
       this.newMovie = { title: '', director: '', duration: '' };
+      // Refresh list after adding
+      this.fetchMovies();
+    },
+    deleteMovie(id) {
+      this.$emit('delete-movie', id);
+      // Parent will refresh movies globally; but refresh here too after a short delay
+      setTimeout(() => this.fetchMovies(), 200);
     }
   }
 }
