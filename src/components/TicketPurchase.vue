@@ -70,8 +70,7 @@ export default {
       this.$emit('buy-ticket', { 
         member_id, 
         showtime_id,
-        price: showtime.price, // 使用场次设定的价格
-        movie_id: this.selectedMovieId // 兼容旧逻辑
+        price: showtime.price // 使用场次设定的价格
       });
       
       this.ticketForm = { member_id: '', showtime_id: '' };

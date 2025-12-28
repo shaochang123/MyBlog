@@ -67,12 +67,12 @@ export default {
       let result = this.movies;
 
       if (this.showPopularOnly) {
-        result = result.filter(m => m.ticket_count > 0);
+        result = result.filter(m => Number(m.ticket_count || 0) > Number(m.avg_ticket_count || 0));
       }
 
       if (this.showHighValueOnly && this.movies.length > 0) {
-        const globalAvg = this.movies[0].global_avg_price || 0;
-        result = result.filter(m => m.avg_price > globalAvg);
+        const globalAvg = Number((this.movies.find(m => m.global_avg_price != null) || {}).global_avg_price) || 0;
+        result = result.filter(m => Number(m.avg_price) > globalAvg);
       }
 
       if (!this.searchQuery) return result;

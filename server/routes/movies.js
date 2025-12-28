@@ -9,13 +9,18 @@ router.get('/', (req, res) => {
     // 注意：这里使用 LEFT JOIN 确保即使没有票也能查出电影
     const sql = `
         SELECT m.*, 
-               COALESCE(AVG(s.price), 0) as avg_price,
-               COUNT(t.ticket_id) as ticket_count,
+               (SELECT COALESCE(AVG(price), 0) FROM showtimes WHERE movie_id = m.movie_id) as avg_price,
+               (SELECT COUNT(t.ticket_id) FROM showtimes s JOIN tickets t ON t.showtime_id = s.id WHERE s.movie_id = m.movie_id) as ticket_count,
+               (
+                 SELECT COALESCE(AVG(cnt), 0) FROM (
+                   SELECT COUNT(t2.ticket_id) AS cnt
+                   FROM showtimes s2
+                   JOIN tickets t2 ON t2.showtime_id = s2.id
+                   GROUP BY s2.movie_id
+                 ) AS sub
+               ) AS avg_ticket_count,
                (SELECT AVG(price) FROM showtimes) as global_avg_price
         FROM movies m
-        LEFT JOIN tickets t ON m.movie_id = t.movie_id
-        LEFT JOIN showtimes s ON t.showtime_id = s.id
-        GROUP BY m.movie_id
     `;
     db.query(sql, (err, results) => {
         if (err) return res.status(500).send(err);

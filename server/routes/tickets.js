@@ -17,7 +17,7 @@ const getLocalDateTime = () => {
 
 // Buy ticket (Deduct points and add ticket)
 router.post('/buy', (req, res) => {
-    const { member_id, movie_id, showtime_id } = req.body;
+    const { member_id, showtime_id } = req.body; // movie_id removed
     // 使用本地时间（已修复时区问题）
     const purchase_date = getLocalDateTime();
 
@@ -46,7 +46,8 @@ router.post('/buy', (req, res) => {
                     });
                 }
 
-                const price = showtimeResults[0].price;
+                // Normalize numeric types to avoid string-compare bugs
+                const price = Number(showtimeResults[0].price);
 
                 // 2. Check points
                 connection.query('SELECT points FROM members WHERE member_id = ?', [member_id], (err, results) => {
@@ -63,8 +64,16 @@ router.post('/buy', (req, res) => {
                         });
                     }
 
-                    const currentPoints = results[0].points;
+                    const currentPoints = Number(results[0].points);
+                    if (isNaN(currentPoints)) {
+                        return connection.rollback(() => {
+                            connection.release();
+                            res.status(500).send('Invalid member points value');
+                        });
+                    }
+
                     if (currentPoints < price) {
+                        console.log('Insufficient points:', currentPoints, '<', price);
                         return connection.rollback(() => {
                             connection.release();
                             res.status(400).send('Insufficient points');
@@ -90,8 +99,8 @@ router.post('/buy', (req, res) => {
                             }
 
                             // 5. Insert ticket (WITHOUT price)
-                            const sql = 'INSERT INTO tickets (ticket_id, member_id, movie_id, purchase_date, showtime_id) VALUES (?, ?, ?, ?, ?)';
-                            connection.query(sql, [nextId, member_id, movie_id, purchase_date, showtime_id], (err, result) => {
+                            const sql = 'INSERT INTO tickets (ticket_id, member_id, purchase_date, showtime_id) VALUES (?, ?, ?, ?)';
+                            connection.query(sql, [nextId, member_id, purchase_date, showtime_id], (err, result) => {
                                 if (err) {
                                     return connection.rollback(() => {
                                         connection.release();

@@ -109,15 +109,18 @@ router.post('/:id/recharge', (req, res) => {
 router.get('/:id/tickets', (req, res) => {
     const { id } = req.params;
     const sql = `
-        SELECT t.ticket_id, m.title, s.price, t.purchase_date, h.name as hall_name, s.start_time, t.status
+        SELECT t.ticket_id, COALESCE(m.title, '未知') AS title, COALESCE(s.price, 0) AS price, t.purchase_date, COALESCE(h.name, '') as hall_name, s.start_time, t.status
         FROM tickets t 
-        JOIN movies m ON t.movie_id = m.movie_id 
-        JOIN showtimes s ON t.showtime_id = s.id
-        JOIN halls h ON s.hall_id = h.id
+        LEFT JOIN showtimes s ON t.showtime_id = s.id
+        LEFT JOIN movies m ON s.movie_id = m.movie_id
+        LEFT JOIN halls h ON s.hall_id = h.id
         WHERE t.member_id = ?
     `;
     db.query(sql, [id], (err, results) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+            console.error('Failed to fetch tickets for member', id, err);
+            return res.status(500).send('Failed to fetch tickets');
+        }
         res.json(results);
     });
 });

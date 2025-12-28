@@ -8,7 +8,8 @@ const sql = `
            COUNT(t.ticket_id) as ticket_count,
            (SELECT AVG(price) FROM tickets) as global_avg_price
     FROM movies m
-    LEFT JOIN tickets t ON m.movie_id = t.movie_id
+    LEFT JOIN showtimes s ON s.movie_id = m.movie_id
+    LEFT JOIN tickets t ON t.showtime_id = s.id
     GROUP BY m.movie_id
 `;
 
