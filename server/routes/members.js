@@ -93,12 +93,12 @@ router.post('/:id/recharge', (req, res) => {
     const { id } = req.params;
     const { amount } = req.body;
     const sql = 'UPDATE members SET points = points + ? WHERE member_id = ?';
-    const sql2 = 'INSERT INTO recharge_records (member_id, amount, type, create_time) VALUES (?, ?, "recharge", NOW())';
     db.query(sql, [amount, id], (err, result) => {
         if (err) return res.status(500).send(err);
         req.io.emit('data-update');
         res.json({ message: 'Points recharged' });
     });
+    const sql2 = 'INSERT INTO recharge_records (member_id, amount, type, create_time) VALUES (?, ?, "recharge", NOW())';
     db.query(sql2, [id, amount], (err, result) => {
         if (err) console.error('Recharge record error:', err);
 

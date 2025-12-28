@@ -1,7 +1,7 @@
 <template>
   <div class="card">
     <div class="card-header">
-      <h2>🎟️ 会员购票 (升级版)</h2>
+      <h2>🎟️ 会员购票</h2>
     </div>
     <div class="form-group ticket-form">
       <!-- 1. 选会员 -->
