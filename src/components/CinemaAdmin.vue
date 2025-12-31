@@ -222,7 +222,7 @@ export default {
       const map = {
         'recharge': '充值',
         'payment': '消费',
-        'refund': '退款'
+        'refunded': '退款'
       };
       return map[type] || type;
     }

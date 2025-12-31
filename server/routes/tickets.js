@@ -226,7 +226,7 @@ router.delete('/:id', (req, res) => {
                             }
 
                             const currentStatus = rows[0].status;
-                            if (currentStatus === 'refund') {
+                            if (currentStatus === 'refunded') {
                                 console.warn('Ticket already refunded:', { ticketId: id });
                                 return connection.rollback(() => {
                                     connection.release();
@@ -235,7 +235,7 @@ router.delete('/:id', (req, res) => {
                             }
 
                             // Mark ticket as refunded (do not delete record)
-                            connection.query('UPDATE tickets SET status = ? WHERE ticket_id = ?', ['refund', id], (err) => {
+                            connection.query('UPDATE tickets SET status = ? WHERE ticket_id = ?', ['refunded', id], (err) => {
                                 if (err) {
                                     console.error('Failed to update ticket status:', { ticketId: id, err });
                                     return connection.rollback(() => {
