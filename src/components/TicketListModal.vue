@@ -5,7 +5,7 @@
         <h3>🎫 {{ member?.name }} 的影票记录</h3>
       </div>
       <div class="modal-body">
-        <div class="table-container" v-if="tickets.length">
+        <div class="table-container" v-if="validTickets.length">
           <table>
             <thead>
               <tr>
@@ -17,7 +17,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="ticket in tickets" :key="ticket.ticket_id">
+              <tr v-for="ticket in validTickets" :key="ticket.ticket_id">
                 <td>{{ ticket.title }}</td>
                 <td>
                   <div class="small-text">{{ ticket.hall_name }}</div>
@@ -47,6 +47,11 @@
 export default {
   name: 'TicketListModal',
   props: ['show', 'member', 'tickets'],
+  computed: {
+    validTickets() {
+      return (this.tickets || []).filter(t => t.status === 'valid');
+    }
+  },
   methods: {
     formatDate(dateStr) {
       return new Date(dateStr).toLocaleString();
