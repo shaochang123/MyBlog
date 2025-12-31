@@ -80,7 +80,7 @@ app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/halls', require('./routes/halls'));
 app.use('/api/showtimes', require('./routes/showtimes'));
 app.use('/api/records', require('./routes/records'));
-app.use('/api/analytics', require('./routes/analytics'));
+// app.use('/api/analytics', require('./routes/analytics'));
 
 server.listen(port, () => {
     console.log(`Server running on port ${port}`);
