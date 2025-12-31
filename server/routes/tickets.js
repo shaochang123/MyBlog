@@ -140,14 +140,19 @@ router.post('/buy', (req, res) => {
 // Delete a ticket (Refund points and remove ticket)
 router.delete('/:id', (req, res) => {
     const { id } = req.params;
+    console.log(`Attempting to refund ticket id=${id}`);
 
     db.getConnection((err, connection) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+            console.error('DB getConnection error (refund):', err);
+            return res.status(500).send('DB connection error');
+        }
 
         connection.beginTransaction(err => {
             if (err) {
+                console.error('beginTransaction error (refund):', err);
                 connection.release();
-                return res.status(500).send(err);
+                return res.status(500).send('Transaction error');
             }
 
             // Get ticket info to refund points (Join with showtimes to get price)
@@ -159,43 +164,61 @@ router.delete('/:id', (req, res) => {
             `;
             connection.query(sql, [id], (err, results) => {
                 if (err) {
+                    console.error('Query error fetching ticket info:', { ticketId: id, err });
                     return connection.rollback(() => {
                         connection.release();
-                        res.status(500).send(err);
+                        res.status(500).send('Failed to fetch ticket info');
                     });
                 }
                 if (results.length === 0) {
+                    console.warn('Ticket not found or showtime missing:', { ticketId: id });
                     return connection.rollback(() => {
                         connection.release();
-                        res.status(404).send('Ticket not found');
+                        res.status(404).send('Ticket not found or showtime missing');
                     });
                 }
 
-                const { member_id, price } = results[0];
+                const member_id = results[0].member_id;
+                const priceRaw = results[0].price;
+                const price = Number(priceRaw);
+
+                if (Number.isNaN(price)) {
+                    console.error('Invalid ticket price (not a number):', { ticketId: id, priceRaw });
+                    return connection.rollback(() => {
+                        connection.release();
+                        res.status(500).send('Invalid ticket price');
+                    });
+                }
 
                 // Refund points
-                connection.query('UPDATE members SET points = points + ? WHERE member_id = ?', [price, member_id], (err) => {
+                connection.query('UPDATE members SET points = points + ? WHERE member_id = ?', [price, member_id], (err, updateRes) => {
                     if (err) {
+                        console.error('Failed to refund points:', { ticketId: id, memberId: member_id, price, err });
                         return connection.rollback(() => {
                             connection.release();
-                            res.status(500).send(err);
+                            res.status(500).send('Failed to refund points');
                         });
                     }
 
                     // Insert recharge_record (refund)
                     const recordSql = 'INSERT INTO recharge_records (member_id, amount, type, create_time) VALUES (?, ?, "refund", NOW())';
                     connection.query(recordSql, [member_id, price], (err) => {
-                         if (err) console.error('Failed to log refund record:', err);
+                        if (err) {
+                            console.error('Failed to log refund record (non-fatal):', { ticketId: id, memberId: member_id, price, err });
+                            // Do not abort transaction; proceed to marking ticket refunded
+                        }
 
                         // First check ticket status to avoid double refunds
                         connection.query('SELECT status FROM tickets WHERE ticket_id = ?', [id], (err, rows) => {
                             if (err) {
+                                console.error('Failed to select ticket status:', { ticketId: id, err });
                                 return connection.rollback(() => {
                                     connection.release();
-                                    res.status(500).send(err);
+                                    res.status(500).send('Failed to check ticket status');
                                 });
                             }
                             if (rows.length === 0) {
+                                console.warn('Ticket disappeared between queries:', { ticketId: id });
                                 return connection.rollback(() => {
                                     connection.release();
                                     res.status(404).send('Ticket not found');
@@ -204,6 +227,7 @@ router.delete('/:id', (req, res) => {
 
                             const currentStatus = rows[0].status;
                             if (currentStatus === 'refund') {
+                                console.warn('Ticket already refunded:', { ticketId: id });
                                 return connection.rollback(() => {
                                     connection.release();
                                     res.status(400).send('Ticket already refunded');
@@ -213,17 +237,19 @@ router.delete('/:id', (req, res) => {
                             // Mark ticket as refunded (do not delete record)
                             connection.query('UPDATE tickets SET status = ? WHERE ticket_id = ?', ['refund', id], (err) => {
                                 if (err) {
+                                    console.error('Failed to update ticket status:', { ticketId: id, err });
                                     return connection.rollback(() => {
                                         connection.release();
-                                        res.status(500).send(err);
+                                        res.status(500).send('Failed to update ticket status');
                                     });
                                 }
 
                                 connection.commit(err => {
                                     if (err) {
+                                        console.error('Commit error (refund):', err);
                                         return connection.rollback(() => {
                                             connection.release();
-                                            res.status(500).send(err);
+                                            res.status(500).send('Commit error');
                                         });
                                     }
                                     connection.release();
