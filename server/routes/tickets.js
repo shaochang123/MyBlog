@@ -265,4 +265,29 @@ router.delete('/:id', (req, res) => {
     });
 });
 
+// Get ticket details by ticket_id (useful for debugging)
+router.get('/:id', (req, res) => {
+    const { id } = req.params;
+    const sql = `
+        SELECT t.ticket_id, t.member_id, t.purchase_date, t.showtime_id, t.status,
+               COALESCE(s.price, 0) AS price, s.start_time, m.title AS movie_title, h.name AS hall_name
+        FROM tickets t
+        LEFT JOIN showtimes s ON t.showtime_id = s.id
+        LEFT JOIN movies m ON s.movie_id = m.movie_id
+        LEFT JOIN halls h ON s.hall_id = h.id
+        WHERE t.ticket_id = ?
+    `;
+
+    db.query(sql, [id], (err, results) => {
+        if (err) {
+            console.error('Error fetching ticket details:', { ticketId: id, err });
+            return res.status(500).send('Failed to fetch ticket details');
+        }
+        if (results.length === 0) {
+            return res.status(404).send('Ticket not found');
+        }
+        res.json(results[0]);
+    });
+});
+
 module.exports = router;
